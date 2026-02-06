@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+/* 印刷用スタイル */
+@media print {
+  body {
+    font-size: 11pt;
+    color: #000;
+    background: #fff;
+  }
+
+  nav, .no-print {
+    display: none !important;
+  }
+
+  .print-break {
+    page-break-before: always;
+  }
+
+  a {
+    color: #000;
+    text-decoration: none;
+  }
+}
