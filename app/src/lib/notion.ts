@@ -14,6 +14,24 @@ function richTextToPlain(richText: RichTextItemResponse[]): string {
   return richText.map((t) => t.plain_text).join("");
 }
 
+/** "2009-04-01" → "2009年4月" */
+function formatDateJa(dateStr: string): string {
+  const match = dateStr.match(/^(\d{4})-(\d{2})/);
+  if (!match) return dateStr;
+  const year = match[1];
+  const month = parseInt(match[2], 10);
+  return `${year}年${month}月`;
+}
+
+/** Date property → "YYYY年M月" (single) or "YYYY年M月〜YYYY年M月" (range) */
+function getDateValue(page: PageObjectResponse, name: string): string {
+  const prop = page.properties[name];
+  if (!prop || prop.type !== "date" || !prop.date) return "";
+  const start = formatDateJa(prop.date.start);
+  const end = prop.date.end ? formatDateJa(prop.date.end) : "";
+  return end ? `${start}〜${end}` : start;
+}
+
 function getPropertyValue(page: PageObjectResponse, name: string): string {
   const prop = page.properties[name];
   if (!prop) return "";
@@ -165,7 +183,7 @@ export async function fetchResume(): Promise<ResumeData | null> {
     for (const p of eduPages) {
       educationWork.push({
         content: getPropertyValue(p, "内容"),
-        date: getPropertyValue(p, "年月"),
+        date: getDateValue(p, "年月"),
         category: getPropertyValue(p, "区分"),
         order: Number(getPropertyValue(p, "並び順")) || 0,
       });
@@ -182,7 +200,7 @@ export async function fetchResume(): Promise<ResumeData | null> {
     for (const p of certPages) {
       certifications.push({
         name: getPropertyValue(p, "資格名"),
-        date: getPropertyValue(p, "年月"),
+        date: getDateValue(p, "年月"),
         order: Number(getPropertyValue(p, "並び順")) || 0,
       });
     }
@@ -212,7 +230,7 @@ export async function fetchCareer(): Promise<CareerData | null> {
       allProjects.push({
         name: getPropertyValue(p, "プロジェクト名"),
         company: getPropertyValue(p, "会社名"),
-        period: getPropertyValue(p, "期間"),
+        period: getDateValue(p, "期間"),
         teamSize: getPropertyValue(p, "チーム規模"),
         role: getPropertyValue(p, "役割"),
         responsibilities: getPropertyValue(p, "担当業務"),
@@ -228,7 +246,7 @@ export async function fetchCareer(): Promise<CareerData | null> {
     const company = getPropertyValue(page, "会社名");
     return {
       company,
-      period: getPropertyValue(page, "在籍期間"),
+      period: getDateValue(page, "在籍期間"),
       employmentType: getPropertyValue(page, "雇用形態"),
       position: getPropertyValue(page, "役職"),
       businessDescription: getPropertyValue(page, "事業内容"),
