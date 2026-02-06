@@ -1,7 +1,6 @@
 import { Client } from "@notionhq/client";
 import type {
   PageObjectResponse,
-  BlockObjectResponse,
   RichTextItemResponse,
 } from "@notionhq/client/build/src/api-endpoints";
 
@@ -15,10 +14,7 @@ function richTextToPlain(richText: RichTextItemResponse[]): string {
   return richText.map((t) => t.plain_text).join("");
 }
 
-function getPropertyValue(
-  page: PageObjectResponse,
-  name: string
-): string {
+function getPropertyValue(page: PageObjectResponse, name: string): string {
   const prop = page.properties[name];
   if (!prop) return "";
 
@@ -42,6 +38,20 @@ function getPropertyValue(
   }
 }
 
+async function queryDatabase(
+  dbId: string,
+  sorts?: { property: string; direction: "ascending" | "descending" }[]
+): Promise<PageObjectResponse[]> {
+  const response = await notion.dataSources.query({
+    data_source_id: dbId,
+    sorts,
+  });
+
+  return response.results.filter(
+    (r): r is PageObjectResponse => "properties" in r
+  );
+}
+
 // --- Types ---
 
 export interface ResumeProfile {
@@ -53,11 +63,45 @@ export interface ResumeProfile {
   email: string;
   nearestStation: string;
   photoUrl: string | null;
+  selfPr: string;
+  hobbies: string;
+}
+
+export interface EducationWorkEntry {
+  content: string;
+  date: string;
+  category: string;
+  order: number;
+}
+
+export interface CertificationEntry {
+  name: string;
+  date: string;
+  order: number;
 }
 
 export interface ResumeData {
   profile: ResumeProfile;
-  blocks: BlockObjectResponse[];
+  educationWork: EducationWorkEntry[];
+  certifications: CertificationEntry[];
+}
+
+export interface ProjectEntry {
+  name: string;
+  company: string;
+  period: string;
+  teamSize: string;
+  role: string;
+  responsibilities: string;
+  technologies: string;
+  achievements: string;
+  order: number;
+}
+
+export interface SkillEntry {
+  name: string;
+  category: string;
+  order: number;
 }
 
 export interface CareerEntry {
@@ -67,49 +111,26 @@ export interface CareerEntry {
   position: string;
   businessDescription: string;
   employeeCount: string;
+  summary: string;
   order: number;
-  blocks: BlockObjectResponse[];
+  projects: ProjectEntry[];
 }
 
-// --- Fetch blocks recursively ---
-
-async function fetchBlocks(blockId: string): Promise<BlockObjectResponse[]> {
-  const blocks: BlockObjectResponse[] = [];
-  let cursor: string | undefined;
-
-  do {
-    const response = await notion.blocks.children.list({
-      block_id: blockId,
-      start_cursor: cursor,
-      page_size: 100,
-    });
-
-    for (const block of response.results) {
-      if ("type" in block) {
-        blocks.push(block as BlockObjectResponse);
-      }
-    }
-
-    cursor = response.has_more ? response.next_cursor ?? undefined : undefined;
-  } while (cursor);
-
-  return blocks;
+export interface CareerData {
+  entries: CareerEntry[];
+  skills: SkillEntry[];
 }
 
 // --- Resume ---
 
 export async function fetchResume(): Promise<ResumeData | null> {
-  const dbId = process.env.NOTION_RESUME_DB_ID;
-  if (!dbId) return null;
+  const resumeDbId = process.env.NOTION_RESUME_DB_ID;
+  if (!resumeDbId) return null;
 
-  const response = await notion.dataSources.query({
-    data_source_id: dbId,
-    page_size: 1,
-  });
+  const pages = await queryDatabase(resumeDbId);
+  if (pages.length === 0) return null;
 
-  if (response.results.length === 0) return null;
-
-  const page = response.results[0] as PageObjectResponse;
+  const page = pages[0];
 
   const profile: ResumeProfile = {
     name: getPropertyValue(page, "氏名"),
@@ -120,9 +141,10 @@ export async function fetchResume(): Promise<ResumeData | null> {
     email: getPropertyValue(page, "メールアドレス"),
     nearestStation: getPropertyValue(page, "最寄り駅"),
     photoUrl: null,
+    selfPr: getPropertyValue(page, "自己PR"),
+    hobbies: getPropertyValue(page, "趣味・特技"),
   };
 
-  // Get photo if available
   const photoProp = page.properties["顔写真"];
   if (photoProp?.type === "files" && photoProp.files.length > 0) {
     const file = photoProp.files[0];
@@ -133,40 +155,105 @@ export async function fetchResume(): Promise<ResumeData | null> {
     }
   }
 
-  const blocks = await fetchBlocks(page.id);
+  // Fetch education/work history
+  const educationWork: EducationWorkEntry[] = [];
+  const eduDbId = process.env.NOTION_EDUCATION_WORK_DB_ID;
+  if (eduDbId) {
+    const eduPages = await queryDatabase(eduDbId, [
+      { property: "並び順", direction: "ascending" },
+    ]);
+    for (const p of eduPages) {
+      educationWork.push({
+        content: getPropertyValue(p, "内容"),
+        date: getPropertyValue(p, "年月"),
+        category: getPropertyValue(p, "区分"),
+        order: Number(getPropertyValue(p, "並び順")) || 0,
+      });
+    }
+  }
 
-  return { profile, blocks };
+  // Fetch certifications
+  const certifications: CertificationEntry[] = [];
+  const certDbId = process.env.NOTION_CERTIFICATION_DB_ID;
+  if (certDbId) {
+    const certPages = await queryDatabase(certDbId, [
+      { property: "並び順", direction: "ascending" },
+    ]);
+    for (const p of certPages) {
+      certifications.push({
+        name: getPropertyValue(p, "資格名"),
+        date: getPropertyValue(p, "年月"),
+        order: Number(getPropertyValue(p, "並び順")) || 0,
+      });
+    }
+  }
+
+  return { profile, educationWork, certifications };
 }
 
 // --- Career ---
 
-export async function fetchCareer(): Promise<CareerEntry[]> {
-  const dbId = process.env.NOTION_CAREER_DB_ID;
-  if (!dbId) return [];
+export async function fetchCareer(): Promise<CareerData | null> {
+  const careerDbId = process.env.NOTION_CAREER_DB_ID;
+  if (!careerDbId) return null;
 
-  const response = await notion.dataSources.query({
-    data_source_id: dbId,
-    sorts: [{ property: "並び順", direction: "ascending" }],
-  });
+  const careerPages = await queryDatabase(careerDbId, [
+    { property: "並び順", direction: "ascending" },
+  ]);
 
-  const entries: CareerEntry[] = [];
+  // Fetch all projects
+  const allProjects: ProjectEntry[] = [];
+  const projectDbId = process.env.NOTION_PROJECT_DB_ID;
+  if (projectDbId) {
+    const projectPages = await queryDatabase(projectDbId, [
+      { property: "並び順", direction: "ascending" },
+    ]);
+    for (const p of projectPages) {
+      allProjects.push({
+        name: getPropertyValue(p, "プロジェクト名"),
+        company: getPropertyValue(p, "会社名"),
+        period: getPropertyValue(p, "期間"),
+        teamSize: getPropertyValue(p, "チーム規模"),
+        role: getPropertyValue(p, "役割"),
+        responsibilities: getPropertyValue(p, "担当業務"),
+        technologies: getPropertyValue(p, "使用技術"),
+        achievements: getPropertyValue(p, "成果"),
+        order: Number(getPropertyValue(p, "並び順")) || 0,
+      });
+    }
+  }
 
-  for (const result of response.results) {
-    const page = result as PageObjectResponse;
-
-    const entry: CareerEntry = {
-      company: getPropertyValue(page, "会社名"),
+  // Build career entries with matched projects
+  const entries: CareerEntry[] = careerPages.map((page) => {
+    const company = getPropertyValue(page, "会社名");
+    return {
+      company,
       period: getPropertyValue(page, "在籍期間"),
       employmentType: getPropertyValue(page, "雇用形態"),
       position: getPropertyValue(page, "役職"),
       businessDescription: getPropertyValue(page, "事業内容"),
       employeeCount: getPropertyValue(page, "従業員数"),
+      summary: getPropertyValue(page, "職務要約"),
       order: Number(getPropertyValue(page, "並び順")) || 0,
-      blocks: await fetchBlocks(page.id),
+      projects: allProjects.filter((p) => p.company === company),
     };
+  });
 
-    entries.push(entry);
+  // Fetch skills
+  const skills: SkillEntry[] = [];
+  const skillDbId = process.env.NOTION_SKILL_DB_ID;
+  if (skillDbId) {
+    const skillPages = await queryDatabase(skillDbId, [
+      { property: "並び順", direction: "ascending" },
+    ]);
+    for (const p of skillPages) {
+      skills.push({
+        name: getPropertyValue(p, "スキル名"),
+        category: getPropertyValue(p, "カテゴリ"),
+        order: Number(getPropertyValue(p, "並び順")) || 0,
+      });
+    }
   }
 
-  return entries;
+  return { entries, skills };
 }

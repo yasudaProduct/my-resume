@@ -38,7 +38,11 @@ jobs:
         env:
           NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
           NOTION_RESUME_DB_ID: ${{ secrets.NOTION_RESUME_DB_ID }}
+          NOTION_EDUCATION_WORK_DB_ID: ${{ secrets.NOTION_EDUCATION_WORK_DB_ID }}
+          NOTION_CERTIFICATION_DB_ID: ${{ secrets.NOTION_CERTIFICATION_DB_ID }}
           NOTION_CAREER_DB_ID: ${{ secrets.NOTION_CAREER_DB_ID }}
+          NOTION_PROJECT_DB_ID: ${{ secrets.NOTION_PROJECT_DB_ID }}
+          NOTION_SKILL_DB_ID: ${{ secrets.NOTION_SKILL_DB_ID }}
         run: npm run build
 
       - name: Upload artifact
