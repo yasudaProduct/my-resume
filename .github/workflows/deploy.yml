@@ -46,7 +46,19 @@ jobs:
           NOTION_CAREER_DB_ID: ${{ secrets.NOTION_CAREER_DB_ID }}
           NOTION_PROJECT_DB_ID: ${{ secrets.NOTION_PROJECT_DB_ID }}
           NOTION_SKILL_DB_ID: ${{ secrets.NOTION_SKILL_DB_ID }}
+          NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
         run: npm run build
+
+      - name: Install Japanese fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
+
+      - name: Generate PDFs
+        env:
+          STATIC_MODE: "true"
+          BASE_PATH: ${{ github.event.repository.name && format('/{0}', github.event.repository.name) || '' }}
+        run: npm run generate-pdf
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
