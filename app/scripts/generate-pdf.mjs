@@ -191,8 +191,11 @@ async function main() {
       await browser.close();
     }
     if (server) {
-      server.kill("SIGTERM");
+      // サーバープロセスを強制終了
+      server.kill("SIGKILL");
     }
+    // 明示的にプロセスを終了
+    process.exit(0);
   }
 }
 
