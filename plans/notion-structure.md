@@ -125,19 +125,10 @@ Notion 側に以下の **6 つ** のデータベースを作成してくださ�
 3. 名前を付けて (例: `my-resume`)、ワークスペースを選択
 4. 「Internal Integration Secret」をコピー → GitHub Secrets に `NOTION_API_KEY` として登録
 5. 上記 6 つのデータベースそれぞれで「コネクト」からインテグレーションを追加
-6. 各データベースの URL からデータベース ID を取得 → GitHub Secrets に登録
+6. 各データベースの **Data source ID** を取得 → GitHub Secrets に登録
    - `NOTION_RESUME_DB_ID` (履歴書)
    - `NOTION_EDUCATION_WORK_DB_ID` (学歴職歴)
    - `NOTION_CERTIFICATION_DB_ID` (資格)
    - `NOTION_CAREER_DB_ID` (職務経歴書)
    - `NOTION_PROJECT_DB_ID` (プロジェクト)
    - `NOTION_SKILL_DB_ID` (スキル)
-
-### データベース ID の確認方法
-
-Notion データベースの URL:
-```
-https://www.notion.so/xxxxxxxx?v=yyyyyyyy
-                      ^^^^^^^^
-                      この部分がデータベース ID
-```
