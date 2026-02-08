@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# generated PDFs (for development)
+/public/*.pdf
+
 # production
 /build
 
