@@ -57,7 +57,6 @@ jobs:
       - name: Generate PDFs
         env:
           STATIC_MODE: "true"
-          BASE_PATH: ${{ github.event.repository.name && format('/{0}', github.event.repository.name) || '' }}
         run: npm run generate-pdf
 
       - name: Upload artifact
