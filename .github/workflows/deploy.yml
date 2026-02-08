@@ -3,6 +3,9 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - "plans/**"
   workflow_dispatch:
   schedule:
     - cron: "0 0 * * *" # 毎日 UTC 0:00 に実行
