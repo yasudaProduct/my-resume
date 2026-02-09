@@ -7,13 +7,12 @@
   "sessions": {
     "default": [
       {
-        "name": "console-frontend",
+        "name": "console",
         "autoExecuteCommands": true,
-        "cwd": "./app/",
-        "icon": "console-frontend ",
-        "color": "terminal.ansiBlue",
+        "icon": "terminal-connected",
+        "color": "terminal.ansiGreen",
         "commands": [
-          "echo console-frontend"
+          "cd app"
         ]
       }
     ]
