@@ -19,6 +19,8 @@ const PUBLIC_DIR = join(rootDir, "public");
 const STATIC_MODE = process.env.STATIC_MODE === "true";
 // GitHub Pagesのベースパス
 const BASE_PATH = process.env.BASE_PATH || "";
+// パスワード保護のハッシュ（Puppeteerで認証をバイパスするため）
+const PASSWORD_HASH = process.env.NEXT_PUBLIC_SITE_PASSWORD_HASH || "";
 
 // PDF生成設定
 const pages = [
@@ -45,6 +47,13 @@ async function waitForServer(url, maxAttempts = 30) {
 async function generatePdf(browser, pagePath, outputPath) {
   const page = await browser.newPage();
   const url = `${BASE_URL}${pagePath}`;
+
+  // パスワード保護が有効な場合、ページJS実行前にsessionStorageで認証をバイパス
+  if (PASSWORD_HASH) {
+    await page.evaluateOnNewDocument((hash) => {
+      sessionStorage.setItem("authenticated", hash);
+    }, PASSWORD_HASH);
+  }
 
   console.log(`PDFを生成中: ${url} -> ${outputPath}`);
 

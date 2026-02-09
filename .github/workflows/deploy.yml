@@ -37,6 +37,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Setup password protection
+        run: |
+          if [ -n "$SITE_PASSWORD" ]; then
+            HASH=$(printf '%s' "$SITE_PASSWORD" | sha256sum | cut -d' ' -f1)
+            echo "NEXT_PUBLIC_SITE_PASSWORD_HASH=$HASH" >> "$GITHUB_ENV"
+          fi
+        env:
+          SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
+
       - name: Build
         env:
           NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
@@ -47,7 +56,6 @@ jobs:
           NOTION_PROJECT_DB_ID: ${{ secrets.NOTION_PROJECT_DB_ID }}
           NOTION_SKILL_DB_ID: ${{ secrets.NOTION_SKILL_DB_ID }}
           NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
-          NEXT_PUBLIC_SITE_PASSWORD_HASH: ${{ secrets.SITE_PASSWORD_HASH }}
         run: npm run build
 
       - name: Install Japanese fonts
@@ -59,6 +67,14 @@ jobs:
         env:
           STATIC_MODE: "true"
         run: npm run generate-pdf
+
+      - name: Encrypt PDFs
+        env:
+          SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
+        run: node scripts/encrypt-pdfs.mjs
+
+      - name: Remove print pages from output
+        run: rm -rf out/print
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

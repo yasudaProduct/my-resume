@@ -37,7 +37,6 @@ export default function AuthGate({
     subscribeAuth,
     () => {
       if (!passwordHash) return true;
-      if (window.location.pathname.includes("/print/")) return true;
       return sessionStorage.getItem(SESSION_KEY) === passwordHash;
     },
     () => !passwordHash,

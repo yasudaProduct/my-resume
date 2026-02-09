@@ -56,6 +56,17 @@ async function decryptPdf(
   return new Blob([decrypted], { type: "application/pdf" });
 }
 
+function triggerDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export default function PdfDownloadButton({
   encPath,
   fallbackPath,
@@ -68,45 +79,56 @@ export default function PdfDownloadButton({
   label: string;
 }) {
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleDownload = useCallback(async () => {
     setIsLoading(true);
+    setError("");
     try {
-      const response = await fetch(encPath);
-      if (response.ok) {
+      // 暗号化ファイルを試行
+      const encResponse = await fetch(encPath);
+      if (encResponse.ok) {
         const password = sessionStorage.getItem(PASSWORD_KEY);
         if (!password) {
-          window.location.href = fallbackPath;
+          setError("PDFの復号に失敗しました。再ログインしてください。");
           return;
         }
-        const encryptedData = await response.arrayBuffer();
+        const encryptedData = await encResponse.arrayBuffer();
         const blob = await decryptPdf(encryptedData, password);
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = downloadName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      } else {
-        // Encrypted file not available, fall back to direct PDF
-        window.location.href = fallbackPath;
+        triggerDownload(blob, downloadName);
+        return;
       }
+
+      // 暗号化ファイルが無い場合、非暗号化PDFを試行（ローカル開発用）
+      const pdfResponse = await fetch(fallbackPath);
+      if (pdfResponse.ok) {
+        const blob = await pdfResponse.blob();
+        triggerDownload(blob, downloadName);
+        return;
+      }
+
+      setError("PDFが見つかりませんでした。");
     } catch {
-      window.location.href = fallbackPath;
+      setError("PDFのダウンロードに失敗しました。");
     } finally {
       setIsLoading(false);
     }
   }, [encPath, fallbackPath, downloadName]);
 
   return (
-    <button
-      onClick={handleDownload}
-      disabled={isLoading}
-      className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
-    >
-      {isLoading ? "..." : label}
-    </button>
+    <div className="relative">
+      <button
+        onClick={handleDownload}
+        disabled={isLoading}
+        className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
+      >
+        {isLoading ? "..." : label}
+      </button>
+      {error && (
+        <p className="absolute top-full right-0 mt-1 text-xs text-red-600 bg-white border border-red-200 rounded px-2 py-1 whitespace-nowrap shadow-sm">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
