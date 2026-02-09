@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
 import AuthGate from "./components/AuthGate";
+import PdfDownloadButton from "./components/PdfDownloadButton";
 
 export const metadata: Metadata = {
   title: "履歴書・職務経歴書",
@@ -40,20 +41,18 @@ export default function RootLayout({
                 </Link>
               </div>
               <div className="flex gap-3 text-sm">
-                <a
-                  href={`${basePath}/履歴書.pdf`}
-                  download
-                  className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                >
-                  履歴書PDF
-                </a>
-                <a
-                  href={`${basePath}/職務経歴書.pdf`}
-                  download
-                  className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                >
-                  職務経歴書PDF
-                </a>
+                <PdfDownloadButton
+                  encPath={`${basePath}/resume.pdf.enc`}
+                  fallbackPath={`${basePath}/履歴書.pdf`}
+                  downloadName="履歴書.pdf"
+                  label="履歴書PDF"
+                />
+                <PdfDownloadButton
+                  encPath={`${basePath}/career.pdf.enc`}
+                  fallbackPath={`${basePath}/職務経歴書.pdf`}
+                  downloadName="職務経歴書.pdf"
+                  label="職務経歴書PDF"
+                />
               </div>
             </div>
           </nav>

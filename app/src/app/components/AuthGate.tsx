@@ -10,6 +10,7 @@ async function sha256(message: string): Promise<string> {
 }
 
 const SESSION_KEY = "authenticated";
+const PASSWORD_KEY = "site_password";
 
 // Simple pub/sub to notify useSyncExternalStore when auth state changes
 const listeners = new Set<() => void>();
@@ -54,6 +55,7 @@ export default function AuthGate({
 
       if (hash === passwordHash) {
         sessionStorage.setItem(SESSION_KEY, passwordHash);
+        sessionStorage.setItem(PASSWORD_KEY, password);
         notifyAuthChange();
       } else {
         setError("パスワードが正しくありません");
