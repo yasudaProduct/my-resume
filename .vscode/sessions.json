@@ -14,7 +14,27 @@
         "commands": [
           "cd app"
         ]
-      }
+      },
+      [
+        {
+          "name": "console-build",
+          "autoExecuteCommands": true,
+          "icon": "terminal-connected",
+          "color": "terminal.ansiBlue",
+          "commands": [
+            "cd app && npm run build"
+          ]
+        },
+        {
+          "name": "pdf-generate",
+          "autoExecuteCommands": true,
+          "icon": "terminal-connected",
+          "color": "terminal.ansiBlue",
+          "commands": [
+            "cd app && npm run generate-pdf"
+          ]
+        }
+      ]
     ]
   }
 }
