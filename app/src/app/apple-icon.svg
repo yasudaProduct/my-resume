@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180">
+  <!-- Background -->
+  <rect width="180" height="180" rx="36" fill="#374151"/>
+  <!-- Document -->
+  <rect x="48" y="30" width="84" height="120" rx="6" fill="#ffffff"/>
+  <!-- Folded corner -->
+  <path d="M102 30 L132 60 L102 60 Z" fill="#f3f4f6" stroke="#e5e7eb" stroke-width="1" stroke-linejoin="round"/>
+  <!-- Text lines -->
+  <rect x="60" y="72" width="60" height="6" rx="3" fill="#6b7280"/>
+  <rect x="60" y="86" width="45" height="6" rx="3" fill="#9ca3af"/>
+  <rect x="60" y="100" width="52" height="6" rx="3" fill="#9ca3af"/>
+  <rect x="60" y="114" width="38" height="6" rx="3" fill="#d1d5db"/>
+</svg>
