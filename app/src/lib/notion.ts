@@ -32,6 +32,12 @@ function getDateValue(page: PageObjectResponse, name: string): string {
   return end ? `${start}〜${end}` : start;
 }
 
+function getCheckboxValue(page: PageObjectResponse, name: string): boolean {
+  const prop = page.properties[name];
+  if (!prop || prop.type !== "checkbox") return false;
+  return prop.checkbox;
+}
+
 function getPropertyValue(page: PageObjectResponse, name: string): string {
   const prop = page.properties[name];
   if (!prop) return "";
@@ -114,6 +120,7 @@ export interface ProjectEntry {
   technologies: string;
   achievements: string;
   order: number;
+  hidden: boolean;
 }
 
 export interface SkillEntry {
@@ -227,6 +234,8 @@ export async function fetchCareer(): Promise<CareerData | null> {
       { property: "並び順", direction: "ascending" },
     ]);
     for (const p of projectPages) {
+      const hidden = getCheckboxValue(p, "非表示");
+      if (hidden) continue;
       allProjects.push({
         name: getPropertyValue(p, "プロジェクト名"),
         company: getPropertyValue(p, "会社名"),
@@ -237,6 +246,7 @@ export async function fetchCareer(): Promise<CareerData | null> {
         technologies: getPropertyValue(p, "使用技術"),
         achievements: getPropertyValue(p, "成果"),
         order: Number(getPropertyValue(p, "並び順")) || 0,
+        hidden: false,
       });
     }
   }
