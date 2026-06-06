@@ -81,11 +81,11 @@ export default async function PrintResumePage() {
         </thead>
         <tbody>
           {/* Education header */}
-          <tr>
+          {/* <tr>
             <td colSpan={3} className="print-section-header">
               学歴
             </td>
-          </tr>
+          </tr> */}
           {education.map((entry, i) => {
             const [year, month] = parseDateToYearMonth(entry.date);
             return (
@@ -96,24 +96,13 @@ export default async function PrintResumePage() {
               </tr>
             );
           })}
-          {/* Empty rows for education */}
-          {education.length < 5 &&
-            Array(5 - education.length)
-              .fill(null)
-              .map((_, i) => (
-                <tr key={`edu-empty-${i}`}>
-                  <td className="print-td-date"></td>
-                  <td className="print-td-date"></td>
-                  <td></td>
-                </tr>
-              ))}
 
           {/* Work header */}
-          <tr>
+          {/* <tr>
             <td colSpan={3} className="print-section-header">
               職歴
             </td>
-          </tr>
+          </tr> */}
           {work.map((entry, i) => {
             const [year, month] = parseDateToYearMonth(entry.date);
             return (
@@ -153,17 +142,6 @@ export default async function PrintResumePage() {
               </tr>
             );
           })}
-          {/* Empty rows */}
-          {certifications.length < 4 &&
-            Array(4 - certifications.length)
-              .fill(null)
-              .map((_, i) => (
-                <tr key={`cert-empty-${i}`}>
-                  <td className="print-td-date"></td>
-                  <td className="print-td-date"></td>
-                  <td></td>
-                </tr>
-              ))}
         </tbody>
       </table>
 
