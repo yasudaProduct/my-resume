@@ -3,6 +3,8 @@ import type {
   PageObjectResponse,
   RichTextItemResponse,
 } from "@notionhq/client/build/src/api-endpoints";
+import { mkdir, writeFile, access } from "fs/promises";
+import path from "path";
 
 const notion = new Client({
   auth: process.env.NOTION_API_KEY,
@@ -60,6 +62,49 @@ function getPropertyValue(page: PageObjectResponse, name: string): string {
     default:
       return "";
   }
+}
+
+/** Notion のファイル URL は署名付きで約1時間で失効するため、ビルド時に public へ保存する */
+async function cachePhotoLocally(remoteUrl: string): Promise<string | null> {
+  try {
+    const response = await fetch(remoteUrl);
+    if (!response.ok) return null;
+
+    const contentType = response.headers.get("content-type") ?? "";
+    const extFromType: Record<string, string> = {
+      "image/jpeg": ".jpg",
+      "image/png": ".png",
+      "image/gif": ".gif",
+      "image/webp": ".webp",
+    };
+    const ext =
+      extFromType[contentType.split(";")[0].trim()] ??
+      (path.extname(new URL(remoteUrl).pathname) || ".png");
+
+    const filename = `photo${ext}`;
+    const publicDir = path.join(process.cwd(), "public");
+    const filePath = path.join(publicDir, filename);
+
+    try {
+      await access(filePath);
+    } catch {
+      await mkdir(publicDir, { recursive: true });
+      const buffer = Buffer.from(await response.arrayBuffer());
+      await writeFile(filePath, buffer);
+    }
+
+    const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+    return `${basePath}/${filename}`;
+  } catch {
+    return null;
+  }
+}
+
+async function resolvePhotoUrl(remoteUrl: string): Promise<string> {
+  if (process.env.NODE_ENV === "development") {
+    return remoteUrl;
+  }
+  return (await cachePhotoLocally(remoteUrl)) ?? remoteUrl;
 }
 
 async function queryDatabase(
@@ -173,10 +218,14 @@ export async function fetchResume(): Promise<ResumeData | null> {
   const photoProp = page.properties["顔写真"];
   if (photoProp?.type === "files" && photoProp.files.length > 0) {
     const file = photoProp.files[0];
-    if (file.type === "file") {
-      profile.photoUrl = file.file.url;
-    } else if (file.type === "external") {
-      profile.photoUrl = file.external.url;
+    const remoteUrl =
+      file.type === "file"
+        ? file.file.url
+        : file.type === "external"
+          ? file.external.url
+          : null;
+    if (remoteUrl) {
+      profile.photoUrl = await resolvePhotoUrl(remoteUrl);
     }
   }
 

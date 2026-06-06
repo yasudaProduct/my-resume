@@ -20,6 +20,9 @@
 # generated PDFs (for development)
 /public/*.pdf
 
+# generated photo from Notion (build time)
+/public/photo.*
+
 # production
 /build
 
