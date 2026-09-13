@@ -14,6 +14,53 @@ function richTextToPlain(richText: RichTextItemResponse[]): string {
   return richText.map((t) => t.plain_text).join("");
 }
 
+/** 拡張子から MIME タイプを推定する (S3 が汎用の Content-Type を返す場合の保険) */
+function guessImageMimeType(url: string): string {
+  const ext = new URL(url).pathname.split(".").pop()?.toLowerCase();
+  switch (ext) {
+    case "png":
+      return "image/png";
+    case "gif":
+      return "image/gif";
+    case "webp":
+      return "image/webp";
+    case "svg":
+      return "image/svg+xml";
+    default:
+      return "image/jpeg";
+  }
+}
+
+/**
+ * 画像を取得して data URL に変換する。
+ *
+ * Notion にアップロードしたファイルの URL は有効期限付きの署名付き URL のため、
+ * 静的エクスポートした HTML にそのまま埋め込むと、
+ * 配信中に期限切れとなって画像が表示されなくなる。
+ * PDF 生成時のヘッドレスブラウザは特に失敗しやすいので、
+ * ビルド時に画像の実体を取り込んでしまう。
+ */
+async function fetchImageAsDataUrl(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.warn(`画像の取得に失敗しました (${response.status}): ${url}`);
+      return null;
+    }
+
+    const contentType = response.headers.get("content-type") ?? "";
+    const mimeType = contentType.startsWith("image/")
+      ? contentType
+      : guessImageMimeType(url);
+
+    const base64 = Buffer.from(await response.arrayBuffer()).toString("base64");
+    return `data:${mimeType};base64,${base64}`;
+  } catch (error) {
+    console.warn(`画像の取得に失敗しました: ${url}`, error);
+    return null;
+  }
+}
+
 /** "2009-04-01" → "2009年4月" */
 function formatDateJa(dateStr: string): string {
   const match = dateStr.match(/^(\d{4})-(\d{2})/);
@@ -173,10 +220,17 @@ export async function fetchResume(): Promise<ResumeData | null> {
   const photoProp = page.properties["顔写真"];
   if (photoProp?.type === "files" && photoProp.files.length > 0) {
     const file = photoProp.files[0];
-    if (file.type === "file") {
-      profile.photoUrl = file.file.url;
-    } else if (file.type === "external") {
-      profile.photoUrl = file.external.url;
+    const photoUrl =
+      file.type === "file"
+        ? file.file.url
+        : file.type === "external"
+          ? file.external.url
+          : null;
+
+    if (photoUrl) {
+      // 署名付き URL をそのまま使うと期限切れで表示できなくなるため data URL 化する。
+      // 取得に失敗した場合は元の URL にフォールバックする。
+      profile.photoUrl = (await fetchImageAsDataUrl(photoUrl)) ?? photoUrl;
     }
   }
 
