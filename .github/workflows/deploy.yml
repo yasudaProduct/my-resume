@@ -67,7 +67,14 @@ jobs:
         run: |
           REPO_NAME="${{ github.event.repository.name }}"
           mkdir -p "out/${REPO_NAME}"
-          ln -s ../_next "out/${REPO_NAME}/_next"
+          # PDF生成では out/ をルートとして配信するため、basePath 付きの URL
+          # (/<repo>/_next/..., /<repo>/photo.png など) も解決できるようにする。
+          # 個別指定にすると public に追加したアセットを取りこぼすので out/ 直下を全て貼る。
+          for entry in out/*; do
+            name="$(basename "$entry")"
+            [ "$name" = "$REPO_NAME" ] && continue
+            ln -s "../${name}" "out/${REPO_NAME}/${name}"
+          done
 
       - name: Generate PDFs
         env:

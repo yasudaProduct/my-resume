@@ -107,7 +107,9 @@ async function startStaticServer() {
   console.log("静的サーバーを起動中...");
 
   // npx serveを使用して静的ファイルを配信
-  const server = spawn("npx", ["serve", "out", "-l", PORT.toString()], {
+  // --symlinks: basePath 用に貼ったファイルのシンボリックリンクを解決する
+  // （指定しないとディレクトリのリンクは辿るがファイルのリンクは404になる）
+  const server = spawn("npx", ["serve", "out", "-l", PORT.toString(), "--symlinks"], {
     cwd: rootDir,
     stdio: ["ignore", "pipe", "pipe"],
     shell: true,
