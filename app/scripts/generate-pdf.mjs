@@ -62,6 +62,31 @@ async function generatePdf(browser, pagePath, outputPath) {
   // フォントの読み込みを待つ
   await page.evaluateHandle("document.fonts.ready");
 
+  // 画像の読み込み完了を待つ（未完了のまま印刷すると画像が欠ける）
+  await page.evaluate(() =>
+    Promise.all(
+      Array.from(document.images)
+        .filter((img) => !img.complete)
+        .map(
+          (img) =>
+            new Promise((resolve) => {
+              img.addEventListener("load", resolve, { once: true });
+              img.addEventListener("error", resolve, { once: true });
+            })
+        )
+    )
+  );
+
+  // 読み込みに失敗した画像があれば警告する
+  const brokenImages = await page.evaluate(() =>
+    Array.from(document.images)
+      .filter((img) => !img.complete || img.naturalWidth === 0)
+      .map((img) => img.currentSrc.slice(0, 100))
+  );
+  if (brokenImages.length > 0) {
+    console.warn("警告: 読み込めなかった画像があります:", brokenImages);
+  }
+
   await page.pdf({
     path: outputPath,
     format: "A4",
@@ -82,7 +107,9 @@ async function startStaticServer() {
   console.log("静的サーバーを起動中...");
 
   // npx serveを使用して静的ファイルを配信
-  const server = spawn("npx", ["serve", "out", "-l", PORT.toString()], {
+  // --symlinks: basePath 用に貼ったファイルのシンボリックリンクを解決する
+  // （指定しないとディレクトリのリンクは辿るがファイルのリンクは404になる）
+  const server = spawn("npx", ["serve", "out", "-l", PORT.toString(), "--symlinks"], {
     cwd: rootDir,
     stdio: ["ignore", "pipe", "pipe"],
     shell: true,
